@@ -126,6 +126,22 @@ void particle_resample(float *part, float *bel, int n)
   // memory leaks because this function will be called lots of times, it will
   // eat up your memory if you're not careful.
   
+  float *new_part = (float *)calloc(n*3,sizeof(float));
+  if (new_part == NULL) {
+      fprintf(stderr, "Unable to allocate memory for new particles\n");
+      return;
+  }
+
+  for (int k = 0; k<n; k++) { // for every particle to be created 
+    double r = drand48(); // random number between 0 and 1
+    // Use a cumulative sum approach applied to bel array called low-variance resampling
+
+    // the do bit ()
+
+
+  }
+
+  free (new_part);
   return;  
 }
 
