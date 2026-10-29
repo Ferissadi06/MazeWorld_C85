@@ -132,16 +132,34 @@ void particle_resample(float *part, float *bel, int n)
       return;
   }
 
-  for (int k = 0; k<n; k++) { // for every particle to be created 
-    double r = drand48(); // random number between 0 and 1
-    // Use a cumulative sum approach applied to bel array called low-variance resampling
+  // Use a cumulative sum approach applied to bel array called low-variance resampling
+  double r = drand48()/n; // random number between 0 and 1 split into n parts
 
-    // the do bit ()
+  int j = 0; // cumulative sum pointer
+  double c = bel[0]; // cumulative sum
+  for (int i = 0; i < n; i++) {
 
+    double t = r + (double)i/(double)n; // target
+    while (c < t && j < n-1) { // find the particle that corresponds to the target using running sum (only goes forward with j)
+      j++;
+      c += bel[j];
+    }
 
+    // use resampling noise to create a new particle nearby the chosen particle
+    // using same noise pattern found in the main loop for moving particles
+    new_part[3*i] = part[3*j] + R_NOISE*(-.5+drand48()); // x
+    new_part[3*i + 1] = part[3*j + 1] + R_NOISE*(-.5+drand48()); // y
+    new_part[3*i + 2] = part[3*j + 2]; // theta
   }
 
-  free (new_part);
+  // copy the contents over to the original particle array
+  for (int k = 0; k < n; k++) {
+    part[3*k]   = new_part[3*k];
+    part[3*k+1] = new_part[3*k+1];
+    part[3*k+2] = new_part[3*k+2];
+  }
+
+  free (new_part); // free!
   return;  
 }
 
