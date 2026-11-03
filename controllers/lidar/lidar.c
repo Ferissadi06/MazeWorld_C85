@@ -128,8 +128,8 @@ void particle_resample(float *part, float *bel, int n)
   // eat up your memory if you're not careful.
 
   float *new_part = (float *)calloc(n * 3, sizeof(float));
-  if (new_part == NULL)
-  {
+
+  if (new_part == NULL) {
     fprintf(stderr, "Unable to allocate memory for new particles\n");
     return;
   }
@@ -137,28 +137,29 @@ void particle_resample(float *part, float *bel, int n)
   // Use a cumulative sum approach applied to bel array called low-variance resampling
   double r = drand48() / n; // random number between 0 and 1 split into n parts
 
-  int j = 0;         // cumulative sum pointer
+
+  int j = 0; // cumulative sum pointer
   double c = bel[0]; // cumulative sum
-  for (int i = 0; i < n; i++)
-  {
+
+  for (int i = 0; i < n; i++) {
 
     double t = r + (double)i / (double)n; // target
-    while (c < t && j < n - 1)
-    { // find the particle that corresponds to the target using running sum (only goes forward with j)
+    
+    // find the particle that corresponds to the target using running sum (only goes forward with j)
+    while (c < t && j < n - 1) { 
       j++;
       c += bel[j];
     }
 
     // use resampling noise to create a new particle nearby the chosen particle
     // using same noise pattern found in the main loop for moving particles
-    new_part[3*i] = part[3*j] + R_NOISE * (-.5 + drand48());         // x
-    new_part[3*i+1] = part[3*j+1] + R_NOISE * (-.5 + drand48()); // y
-    new_part[3*i+2] = part[3*j+2];                               // theta
+    new_part[3*i] = part[3*j] + R_NOISE * (-.5+drand48()); // x
+    new_part[3*i+1] = part[3*j+1] + R_NOISE * (-.5+drand48()); // y
+    new_part[3*i+2] = part[3*j+2]; // theta
   }
 
   // copy the contents over to the original particle array
-  for (int k = 0; k < n; k++)
-  {
+  for (int k = 0; k < n; k++) {
     part[3*k] = new_part[3*k];
     part[3*k+1] = new_part[3*k+1];
     part[3*k+2] = new_part[3*k+2];
@@ -620,8 +621,6 @@ float particle_fitness(float *parts, int i, float *gt, const float *lid, int gt_
     o_x = *(pos);
     o_y = *(pos + 1);
 
-    int debug_tick_count = 0; // TEMP: counts ticks, just for the one-shot debug print below
-
     // Main loop controlling the robot, reading sensors, and updating the
     // particle filter
     while (wb_robot_step(TIME_STEP) != -1)
@@ -641,24 +640,6 @@ float particle_fitness(float *parts, int i, float *gt, const float *lid, int gt_
         particle_GT(gt, *(particles + (3 * i)), *(particles + (3 * i) + 1), gt_samples, *(fsize), *(fsize + 1), MAP, sx, sy);
         *(bel + i) = particle_fitness(particles, i, gt, lidar_im, gt_samples, h_samples, S_NOISE);
       }
-
-#ifdef __DEBUG
-      // TEMP: one-shot sanity check on the very first tick. Particle 0 is pinned
-      // at the robot's true starting location (see initParticles override below
-      // in the __DEBUG block). The other two indices are wherever initParticles
-      // randomly scattered them -- computed from NUM_PARTICLES so they stay in
-      // bounds no matter how many particles you're currently running with.
-      // If particle_fitness is discriminating correctly, bel[0]'s RAW value
-      // should be clearly, meaningfully larger than the other two.
-      if (debug_tick_count == 0)
-      {
-        int mid = NUM_PARTICLES / 2;
-        int last = NUM_PARTICLES - 1;
-        fprintf(stderr, "DEBUG raw bel -- particle 0 (true pose): %e | particle %d: %e | particle %d: %e\n",
-                *(bel + 0), mid, *(bel + mid), last, *(bel + last));
-      }
-#endif
-      debug_tick_count++;
 
       // Normalize beliefs
       all_bel = 0;
