@@ -43,10 +43,10 @@
 #define R_NOISE .1        // Resampling noise - create particles nearby!
 #define D_NOISE .015      // Distance noise in meters (simulation space)
 #define PI 3.1415926535
-#define NUM_PARTICLES 500 // NUmber of particles in the filter
+#define NUM_PARTICLES 5000 // NUmber of particles in the filter
 #define MAX_SPHERES 300    // Maximum number of spheres to display (reduce if too laggy)
 #define BD 7               // Minimum image dist. between border and particles
-#define __DEBUG 0    // Turn on/off the debug print statements
+//#define __DEBUG 0    // Turn on/off the debug print statements
 //  use step-by-step simulation for this!
 
 unsigned char *read_PPM_map(int *sx, int *sy, char *name)
