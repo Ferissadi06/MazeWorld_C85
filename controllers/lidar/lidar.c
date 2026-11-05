@@ -134,8 +134,16 @@ void particle_resample(float *part, float *bel, int n)
     return;
   }
 
-  // Use a cumulative sum approach applied to bel array called low-variance resampling
   double r = drand48() / n; // random number between 0 and 1 split into n parts
+
+  /**
+   * Basically, in our number line from [0, 1], we pick a random number between [0, 1/n]
+   * 
+   *    <------|-----|------|------------------------------------|-------------------->
+   *           0     r     1/n                                   1
+   * 
+   * All numbers will be scattered evenly at distances of 1/n starting with an initial offset of r.
+   */
 
 
   int j = 0; // cumulative sum pointer
@@ -145,7 +153,13 @@ void particle_resample(float *part, float *bel, int n)
 
     double t = r + (double)i / (double)n; // target
     
-    // find the particle that corresponds to the target using running sum (only goes forward with j)
+    /**
+     * To find the particle that corresponds to the target, we do some crazy smart boi stuff:
+     * 
+     *  Since our tragets can only increase, we can only keep track of a pointer j that points to the current particle in the cumulative sum.
+     *      This pointer will only move forward for a new found particle. This way, this is a brilliant O(n) thingie!! NOICE
+     */
+
     while (c < t && j < n - 1) { 
       j++;
       c += bel[j];
@@ -153,8 +167,8 @@ void particle_resample(float *part, float *bel, int n)
 
     // use resampling noise to create a new particle nearby the chosen particle
     // using same noise pattern found in the main loop for moving particles
-    new_part[3*i] = part[3*j] + R_NOISE * (-.5+drand48()); // x
-    new_part[3*i+1] = part[3*j+1] + R_NOISE * (-.5+drand48()); // y
+    new_part[3*i] = part[3*j] + R_NOISE * (-0.5 + drand48()); // x
+    new_part[3*i+1] = part[3*j+1] + R_NOISE * (-0.5 + drand48()); // y
     new_part[3*i+2] = part[3*j+2]; // theta
   }
 
@@ -217,12 +231,17 @@ float particle_fitness(float *parts, int i, float *gt, const float *lid, int gt_
 
   double best_log = -INFINITY;
   int best_offset = 0;
+  int n_valid = 0; // no of valid lidars
 
   // Loop over ground truth array
   for (int offset = 0; offset < gt_samples; offset++)
   {
     double total_log = 0.0;
 
+
+    // Perhaps I would have prefered it if you typed this in LaTeX @rissa, but ig this is more readable
+
+    
     // Calculating likelihood L_j:
     // From lecture notes =>
     // p(z|x_i) = N(E, mu, sigma) = PRODUCT_{j=1}^{w} (1/sqrt(2*pi*sigma^2)) * e^(-(err_j - mu)^2/(2*sigma^2)), 
@@ -250,11 +269,12 @@ float particle_fitness(float *parts, int i, float *gt, const float *lid, int gt_
     // Loop over lidar array
     for (int j = 0; j < lid_samples; j++) { 
       // Handle inf from lidar
-      if (lid[j] == INFINITY) {
+      if (!isfinite(lid[j])) {
         continue; // skip beam
       }
       else {
-        int gt_j = (offset + j) % gt_samples;
+        if (offset == 0) n_valid++;
+        int gt_j = (offset + (int)((double)j * gt_samples / (2.0 * lid_samples))) % gt_samples; //  Find the closest gt sample to the lid smaple
         double log_L_j = -(lid[j] - gt[gt_j])*(lid[j] - gt[gt_j])/(2.0*noise*noise); // from above derivation
         total_log += log_L_j;
       }
@@ -269,7 +289,11 @@ float particle_fitness(float *parts, int i, float *gt, const float *lid, int gt_
   // Update angle for that particle
   parts[3*i+2] = best_offset * (2.0*PI/gt_samples); // from th = i * 2.0 * PI / n_samples;
 
-  return exp(best_log/(lid_samples/2)); // I'm tryna fix underflows with the /2
+  if (n_valid == 0){
+    return 1;
+  }
+
+  return exp(best_log / n_valid);
 }
 
   //// YOU DO NOT NEED TO MODIFY ANY CODE BELOW THIS POINT - but you are encouraged
